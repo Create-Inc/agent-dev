@@ -1,9 +1,10 @@
-import { findActiveSession, removeSession, isRunning } from "../session.js";
+import { findSession, removeSession, isRunning } from "../session.js";
+import type { Options } from "../flags.js";
 
-export function stop(_args: string[]) {
-  const session = findActiveSession();
+export function stop(_args: string[], options: Options) {
+  const session = findSession(options.session);
   if (!session) {
-    console.error("no active session");
+    console.error(options.session ? `no active session "${options.session}"` : "no active session");
     process.exit(1);
   }
 
@@ -13,7 +14,6 @@ export function stop(_args: string[]) {
     // already dead
   }
 
-  // give it a moment, then force kill
   setTimeout(() => {
     if (isRunning(session.pid)) {
       try {

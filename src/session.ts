@@ -4,9 +4,12 @@ import { randomBytes } from "node:crypto";
 
 export interface SessionMeta {
   id: string;
+  name: string | null;
   cmd: string[];
   cwd: string;
   pid: number;
+  portless: boolean;
+  url: string | null;
   startedAt: string;
 }
 
@@ -47,10 +50,17 @@ export function isRunning(pid: number): boolean {
   }
 }
 
-export function findActiveSession(): SessionMeta | null {
+export function findSession(name: string | null): SessionMeta | null {
   const sessions = listSessions();
+  if (name) {
+    return sessions.find((s) => s.name === name && isRunning(s.pid)) ?? null;
+  }
   for (const s of sessions) {
     if (isRunning(s.pid)) return s;
   }
   return null;
+}
+
+export function findActiveSession(): SessionMeta | null {
+  return findSession(null);
 }

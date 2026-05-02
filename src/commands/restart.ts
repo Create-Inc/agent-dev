@@ -1,14 +1,15 @@
-import { findActiveSession, removeSession, isRunning } from "../session.js";
+import { findSession, removeSession, isRunning } from "../session.js";
 import { daemonize } from "../daemon.js";
+import type { Options } from "../flags.js";
 
-export function restart(_args: string[]) {
-  const session = findActiveSession();
+export function restart(_args: string[], options: Options) {
+  const session = findSession(options.session);
   if (!session) {
-    console.error("no active session to restart");
+    console.error(options.session ? `no active session "${options.session}"` : "no active session to restart");
     process.exit(1);
   }
 
-  const { cmd, pid, id } = session;
+  const { cmd, pid, id, portless, name } = session;
 
   try {
     process.kill(pid, "SIGTERM");
@@ -26,7 +27,10 @@ export function restart(_args: string[]) {
     }
     removeSession(id);
 
-    const meta = daemonize(cmd);
-    console.log(JSON.stringify({ restarted: meta.id, pid: meta.pid, cmd: meta.cmd.join(" ") }));
+    const restartOptions: Options = { session: name ?? options.session, portless: portless || options.portless };
+    const meta = daemonize(cmd, restartOptions);
+    const out: Record<string, unknown> = { restarted: meta.id, pid: meta.pid, cmd: meta.cmd.join(" ") };
+    if (meta.url) out.url = meta.url;
+    console.log(JSON.stringify(out));
   }, 500);
 }

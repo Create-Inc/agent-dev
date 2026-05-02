@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export const STATE_DIR = join(homedir(), ".agent-dev");
+export const STATE_DIR = process.env.AGENT_DEV_LOG_DIR ?? join(homedir(), ".agent-dev");
 export const SESSIONS_DIR = join(STATE_DIR, "sessions");
 
 export function sessionDir(id: string) {
