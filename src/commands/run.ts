@@ -16,8 +16,11 @@ export function run(args: string[], options: Options) {
   }
 
   const meta = daemonize(args, options);
-  const out: Record<string, unknown> = { session: meta.id, pid: meta.pid, cmd: meta.cmd.join(" ") };
-  if (meta.name) out.name = meta.name;
-  if (meta.url) out.url = meta.url;
-  console.log(JSON.stringify(out));
+
+  if (!options.attach) {
+    const out: Record<string, unknown> = { session: meta.id, pid: meta.pid, cmd: meta.cmd.join(" ") };
+    if (meta.name) out.name = meta.name;
+    if (meta.url) out.url = meta.url;
+    console.log(JSON.stringify(out));
+  }
 }

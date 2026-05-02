@@ -34,8 +34,11 @@ yargs(hideBin(process.argv))
   .options(globalOptions)
   .command(
     "run <cmd..>",
-    "Start a dev server as a background daemon",
-    (y) => y.positional("cmd", { type: "string", array: true, demandOption: true }),
+    "Start a dev server (background by default, --attach for foreground)",
+    (y) =>
+      y
+        .positional("cmd", { type: "string", array: true, demandOption: true })
+        .option("attach", { type: "boolean", describe: "Run in foreground, tee output to log" }),
     (argv) => run(argv.cmd as string[], toOptions(argv))
   )
   .command(

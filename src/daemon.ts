@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { openSync, mkdirSync } from "node:fs";
+import { openSync, createWriteStream, mkdirSync } from "node:fs";
 import { logFile, sessionDir } from "./paths.js";
 import { defaultSessionId, saveMeta, type SessionMeta } from "./session.js";
 import type { Options } from "./flags.js";
@@ -10,8 +10,6 @@ export function daemonize(cmd: string[], options: Options): SessionMeta {
   mkdirSync(dir, { recursive: true });
 
   const log = logFile(id);
-  const out = openSync(log, "a");
-  const err = openSync(log, "a");
 
   let spawnCmd: string[];
   let url: string | null = null;
@@ -25,6 +23,22 @@ export function daemonize(cmd: string[], options: Options): SessionMeta {
   }
 
   const [bin, ...args] = spawnCmd;
+
+  if (options.attach) {
+    return spawnAttached(bin, args, { id, cmd, log, url, options });
+  }
+
+  return spawnDetached(bin, args, { id, cmd, log, url, options });
+}
+
+function spawnDetached(
+  bin: string,
+  args: string[],
+  ctx: { id: string; cmd: string[]; log: string; url: string | null; options: Options }
+): SessionMeta {
+  const out = openSync(ctx.log, "a");
+  const err = openSync(ctx.log, "a");
+
   const child = spawn(bin, args, {
     detached: true,
     stdio: ["ignore", out, err],
@@ -34,16 +48,64 @@ export function daemonize(cmd: string[], options: Options): SessionMeta {
   child.unref();
 
   const meta: SessionMeta = {
-    id,
-    name: options.session,
-    cmd,
+    id: ctx.id,
+    name: ctx.options.session,
+    cmd: ctx.cmd,
     cwd: process.cwd(),
     pid: child.pid!,
-    portless: options.portless,
-    url,
+    portless: ctx.options.portless,
+    url: ctx.url,
     startedAt: new Date().toISOString(),
   };
 
   saveMeta(meta);
+  return meta;
+}
+
+function spawnAttached(
+  bin: string,
+  args: string[],
+  ctx: { id: string; cmd: string[]; log: string; url: string | null; options: Options }
+): SessionMeta {
+  const logStream = createWriteStream(ctx.log, { flags: "a" });
+
+  const child = spawn(bin, args, {
+    stdio: ["inherit", "pipe", "pipe"],
+    cwd: process.cwd(),
+  });
+
+  // tee stdout and stderr to both terminal and log file
+  child.stdout!.on("data", (chunk: Buffer) => {
+    process.stdout.write(chunk);
+    logStream.write(chunk);
+  });
+  child.stderr!.on("data", (chunk: Buffer) => {
+    process.stderr.write(chunk);
+    logStream.write(chunk);
+  });
+
+  const meta: SessionMeta = {
+    id: ctx.id,
+    name: ctx.options.session,
+    cmd: ctx.cmd,
+    cwd: process.cwd(),
+    pid: child.pid!,
+    portless: ctx.options.portless,
+    url: ctx.url,
+    startedAt: new Date().toISOString(),
+  };
+
+  saveMeta(meta);
+
+  child.on("close", (code) => {
+    logStream.end();
+    process.exit(code ?? 0);
+  });
+
+  // forward signals to child
+  for (const sig of ["SIGINT", "SIGTERM"] as const) {
+    process.on(sig, () => child.kill(sig));
+  }
+
   return meta;
 }

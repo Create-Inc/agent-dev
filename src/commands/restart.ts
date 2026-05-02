@@ -19,7 +19,7 @@ export function restart(_args: string[], options: Options) {
     }
     removeSession(id);
 
-    const restartOptions: Options = { session: name ?? options.session, portless: portless || options.portless, all: false };
+    const restartOptions: Options = { session: name ?? options.session, portless: portless || options.portless, all: false, attach: false };
     const meta = daemonize(cmd, restartOptions);
     const out: Record<string, unknown> = { restarted: meta.id, pid: meta.pid, cmd: meta.cmd.join(" ") };
     if (meta.url) out.url = meta.url;
