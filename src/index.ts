@@ -10,6 +10,8 @@ import { restart } from "./commands/restart.js";
 import { status } from "./commands/status.js";
 import { logs, tail, head } from "./commands/logs.js";
 import { mark, marks } from "./commands/mark.js";
+import { wait } from "./commands/wait.js";
+import { clean } from "./commands/clean.js";
 
 const globalOptions = {
   session: {
@@ -19,6 +21,10 @@ const globalOptions = {
   portless: {
     type: "boolean" as const,
     describe: "Route through portless (https://<name>.localhost)",
+  },
+  all: {
+    type: "boolean" as const,
+    describe: "Ignore repo scope and marks",
   },
 };
 
@@ -48,9 +54,7 @@ yargs(hideBin(process.argv))
     "search <terms..>",
     "Search session logs",
     (y) =>
-      y
-        .positional("terms", { type: "string", array: true, demandOption: true })
-        .option("all", { type: "boolean", describe: "Search all logs, ignoring marks" }),
+      y.positional("terms", { type: "string", array: true, demandOption: true }),
     (argv) => search(argv.terms as string[], toOptions(argv))
   )
   .command(
@@ -88,6 +92,22 @@ yargs(hideBin(process.argv))
     "List all marks",
     (y) => y,
     (argv) => marks([], toOptions(argv))
+  )
+  .command(
+    "wait",
+    "Wait until the server is ready",
+    (y) =>
+      y
+        .option("port", { type: "number", describe: "Wait for a specific port" })
+        .option("text", { type: "string", describe: "Wait for text in logs" })
+        .option("timeout", { type: "number", default: 30000, describe: "Timeout in ms" }),
+    (argv) => wait([], { ...toOptions(argv), port: argv.port, text: argv.text, timeout: argv.timeout })
+  )
+  .command(
+    "clean",
+    "Remove dead session state",
+    (y) => y,
+    (argv) => clean([], toOptions(argv))
   )
   .demandCommand(1, "")
   .parserConfiguration({ "unknown-options-as-args": true })

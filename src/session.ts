@@ -50,7 +50,6 @@ export function defaultSessionId(): string {
     }
   }
 
-  // non-git: hash the cwd for a stable session id
   const cwd = process.cwd();
   const hash = createHash("sha256").update(cwd).digest("hex").slice(0, 8);
   const dirName = cwd.split("/").pop() ?? "project";
@@ -71,20 +70,24 @@ export function loadMeta(id: string): SessionMeta | null {
 
 export function listSessions(): SessionMeta[] {
   if (!existsSync(SESSIONS_DIR)) return [];
-  const all = readdirSync(SESSIONS_DIR)
+  return readdirSync(SESSIONS_DIR)
     .map((name) => loadMeta(name))
     .filter((m): m is SessionMeta => m !== null);
+}
 
-  // auto-prune dead sessions
-  const alive: SessionMeta[] = [];
-  for (const s of all) {
-    if (isRunning(s.pid)) {
-      alive.push(s);
-    } else {
+export function listRepoSessions(): SessionMeta[] {
+  return listSessions().filter((s) => isSameRepo(s.cwd));
+}
+
+export function cleanDeadSessions(): string[] {
+  const cleaned: string[] = [];
+  for (const s of listSessions()) {
+    if (!isRunning(s.pid)) {
       removeSession(s.id);
+      cleaned.push(s.id);
     }
   }
-  return alive;
+  return cleaned;
 }
 
 export function removeSession(id: string) {
@@ -106,10 +109,6 @@ export function isRunning(pid: number): boolean {
   }
 }
 
-export function listRepoSessions(): SessionMeta[] {
-  return listSessions().filter((s) => isSameRepo(s.cwd));
-}
-
 function isSameRepo(sessionCwd: string): boolean {
   const root = getProjectRoot();
   return sessionCwd.startsWith(root);
@@ -120,9 +119,8 @@ export function findSession(name: string | null): SessionMeta | null {
   if (name) {
     return sessions.find((s) => s.name === name || s.id === name) ?? null;
   }
-  // without --session, scope to current repo
   for (const s of sessions) {
-    if (isSameRepo(s.cwd)) return s;
+    if (isRunning(s.pid) && isSameRepo(s.cwd)) return s;
   }
   return null;
 }

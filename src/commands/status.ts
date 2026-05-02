@@ -1,4 +1,4 @@
-import { listSessions, listRepoSessions } from "../session.js";
+import { listSessions, listRepoSessions, isRunning } from "../session.js";
 import type { Options } from "../flags.js";
 
 export function status(_args: string[], options: Options) {
@@ -17,7 +17,7 @@ export function status(_args: string[], options: Options) {
     const out: Record<string, unknown> = {
       session: s.id,
       pid: s.pid,
-      running: true,
+      running: isRunning(s.pid),
       cmd: s.cmd.join(" "),
       cwd: s.cwd,
       started: s.startedAt,
