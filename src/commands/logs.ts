@@ -32,9 +32,9 @@ export function tail(args: string[], options: Options) {
   }
 }
 
-export async function head(args: string[], options: Options) {
+export function head(args: string[], options: Options) {
   const n = parseInt(args[0]) || 50;
-  const lines = await readHeadLines(resolveLog(options), n);
+  const lines = readHeadLines(resolveLog(options), n);
   for (const line of lines) {
     console.log(line);
   }

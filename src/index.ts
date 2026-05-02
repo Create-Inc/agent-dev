@@ -46,4 +46,4 @@ env:
   process.exit(command ? 1 : 0);
 }
 
-commands[command](args, options);
+await commands[command](args, options);

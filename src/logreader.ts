@@ -75,22 +75,19 @@ export function readTailLines(path: string, n: number): string[] {
   return trimmed.slice(Math.max(0, trimmed.length - n));
 }
 
-export function readHeadLines(path: string, n: number): Promise<string[]> {
-  return new Promise((resolve) => {
-    const lines: string[] = [];
-    const stream = createReadStream(path, { encoding: "utf-8", highWaterMark: 8192 });
-    const rl = createInterface({ input: stream });
+export function readHeadLines(path: string, n: number): string[] {
+  const chunkSize = Math.max(n * 200, 8192);
+  const size = statSync(path).size;
+  const readSize = Math.min(size, chunkSize);
+  if (readSize === 0) return [];
 
-    rl.on("line", (line) => {
-      lines.push(line);
-      if (lines.length >= n) {
-        rl.close();
-        stream.destroy();
-      }
-    });
+  const buf = Buffer.alloc(readSize);
+  const fd = openSync(path, "r");
+  readSync(fd, buf, 0, readSize, 0);
+  closeSync(fd);
 
-    rl.on("close", () => resolve(lines));
-  });
+  const lines = buf.toString("utf-8").split("\n");
+  return lines.slice(0, n);
 }
 
 export function streamAll(path: string): void {

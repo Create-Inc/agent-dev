@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "link": "npm run build && npm link"
+    "link": "npm run build && npm link",
+    "test": "npm run build && node --test --experimental-strip-types test/e2e.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.8.0",
