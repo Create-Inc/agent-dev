@@ -1,4 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { pidFile, metaFile, sessionDir, SESSIONS_DIR } from "./paths.js";
 import { randomBytes } from "node:crypto";
 
@@ -15,6 +17,24 @@ export interface SessionMeta {
 
 export function generateId(): string {
   return randomBytes(4).toString("hex");
+}
+
+export function defaultSessionId(): string {
+  try {
+    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    const hash = createHash("sha256").update(`${root}:${branch}`).digest("hex").slice(0, 8);
+    const repoName = root.split("/").pop() ?? "repo";
+    return `${repoName}-${branch}-${hash}`;
+  } catch {
+    return generateId();
+  }
 }
 
 export function saveMeta(meta: SessionMeta) {
@@ -41,6 +61,13 @@ export function removeSession(id: string) {
   if (existsSync(dir)) rmSync(dir, { recursive: true });
 }
 
+export function killProcessGroup(pid: number, signal: NodeJS.Signals = "SIGTERM") {
+  // kill the entire process group (negative pid)
+  try { process.kill(-pid, signal); } catch {}
+  // also kill the pid directly in case it's not a group leader
+  try { process.kill(pid, signal); } catch {}
+}
+
 export function isRunning(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -53,7 +80,7 @@ export function isRunning(pid: number): boolean {
 export function findSession(name: string | null): SessionMeta | null {
   const sessions = listSessions();
   if (name) {
-    return sessions.find((s) => s.name === name && isRunning(s.pid)) ?? null;
+    return sessions.find((s) => (s.name === name || s.id === name) && isRunning(s.pid)) ?? null;
   }
   for (const s of sessions) {
     if (isRunning(s.pid)) return s;

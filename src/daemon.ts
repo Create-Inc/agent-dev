@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
 import { openSync, mkdirSync } from "node:fs";
 import { logFile, sessionDir } from "./paths.js";
-import { generateId, saveMeta, type SessionMeta } from "./session.js";
+import { defaultSessionId, saveMeta, type SessionMeta } from "./session.js";
 import type { Options } from "./flags.js";
 
 export function daemonize(cmd: string[], options: Options): SessionMeta {
-  const id = options.session ?? generateId();
+  const id = options.session ?? defaultSessionId();
   const dir = sessionDir(id);
   mkdirSync(dir, { recursive: true });
 

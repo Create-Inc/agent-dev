@@ -6,6 +6,7 @@ import { search } from "./commands/search.js";
 import { restart } from "./commands/restart.js";
 import { status } from "./commands/status.js";
 import { logs, tail, head } from "./commands/logs.js";
+import { mark, marks } from "./commands/mark.js";
 import { parseFlags } from "./flags.js";
 
 const { options, rest } = parseFlags(process.argv.slice(2));
@@ -20,6 +21,8 @@ const commands: Record<string, (args: string[], options: ReturnType<typeof parse
   logs,
   tail,
   head,
+  mark,
+  marks,
 };
 
 if (!command || !commands[command]) {
@@ -34,10 +37,13 @@ commands:
   logs            Dump all session logs
   tail [n]        Last n lines of logs (default 50)
   head [n]        First n lines of logs (default 50)
+  mark [name]     Set a checkpoint (search defaults to after latest mark)
+  marks           List all marks
 
 flags:
   --session <name>   Name the session (default: random id)
   --portless         Route through portless (https://<name>.localhost)
+  --all              Search all logs, ignoring marks
 
 env:
   AGENT_DEV_SESSION    Default session name

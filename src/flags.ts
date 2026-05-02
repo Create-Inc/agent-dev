@@ -1,12 +1,14 @@
 export interface Options {
   session: string | null;
   portless: boolean;
+  all: boolean;
 }
 
 export function parseFlags(args: string[]): { options: Options; rest: string[] } {
   const rest: string[] = [];
   let session: string | null = process.env.AGENT_DEV_SESSION ?? null;
   let portless = process.env.AGENT_DEV_PORTLESS === "1";
+  let all = false;
 
   let i = 0;
   while (i < args.length) {
@@ -15,6 +17,8 @@ export function parseFlags(args: string[]): { options: Options; rest: string[] }
       session = args[++i];
     } else if (arg === "--portless") {
       portless = true;
+    } else if (arg === "--all") {
+      all = true;
     } else if (arg === "--") {
       rest.push(...args.slice(i + 1));
       break;
@@ -24,5 +28,5 @@ export function parseFlags(args: string[]): { options: Options; rest: string[] }
     i++;
   }
 
-  return { options: { session, portless }, rest };
+  return { options: { session, portless, all }, rest };
 }

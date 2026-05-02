@@ -19,3 +19,7 @@ export function logFile(id: string) {
 export function metaFile(id: string) {
   return join(sessionDir(id), "meta.json");
 }
+
+export function marksFile(id: string) {
+  return join(sessionDir(id), "marks.json");
+}

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { listSessions } from "../session.js";
 import { logFile } from "../paths.js";
 import { searchLog } from "../logreader.js";
+import { getLatestMark } from "../marks.js";
 import type { Options } from "../flags.js";
 
 export function search(args: string[], options: Options) {
@@ -26,11 +27,16 @@ export function search(args: string[], options: Options) {
     const log = logFile(session.id);
     if (!existsSync(log)) continue;
 
-    const results = searchLog(log, pattern);
+    const mark = options.all ? null : getLatestMark(session.id);
+    const results = searchLog(log, pattern, mark ? { startByte: mark.byte } : {});
 
     if (results.length > 0) {
       const label = session.name ?? session.id;
-      console.log(`--- session ${label} (${session.cmd.join(" ")}) ---`);
+      if (mark) {
+        console.log(`--- session ${label} (after mark "${mark.name}") ---`);
+      } else {
+        console.log(`--- session ${label} (${session.cmd.join(" ")}) ---`);
+      }
       for (const { line, num, context } of results) {
         console.log(`  ${num}: ${line}`);
         for (let i = 0; i < context.length; i++) {

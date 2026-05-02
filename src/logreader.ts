@@ -12,12 +12,14 @@ export interface SearchResult {
 export function searchLog(
   path: string,
   pattern: string,
-  opts: { contextLines?: number; maxBytes?: number } = {}
+  opts: { contextLines?: number; maxBytes?: number; startByte?: number } = {}
 ): SearchResult[] {
   const contextLines = opts.contextLines ?? 5;
   const maxBytes = opts.maxBytes ?? DEFAULT_SEARCH_BYTES;
 
-  const { lines, lineOffset } = readTailBytes(path, maxBytes);
+  const { lines, lineOffset } = opts.startByte != null
+    ? readFromByte(path, opts.startByte)
+    : readTailBytes(path, maxBytes);
   const lowerPattern = pattern.toLowerCase();
   const results: SearchResult[] = [];
 
@@ -33,6 +35,23 @@ export function searchLog(
   }
 
   return results;
+}
+
+function readFromByte(
+  path: string,
+  startByte: number
+): { lines: string[]; lineOffset: number } {
+  const size = statSync(path).size;
+  if (startByte >= size) return { lines: [], lineOffset: 0 };
+
+  const readSize = size - startByte;
+  const buf = Buffer.alloc(readSize);
+
+  const fd = openSync(path, "r");
+  readSync(fd, buf, 0, readSize, startByte);
+  closeSync(fd);
+
+  return { lines: buf.toString("utf-8").split("\n"), lineOffset: 0 };
 }
 
 function readTailBytes(

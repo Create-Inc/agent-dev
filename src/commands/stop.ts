@@ -1,4 +1,4 @@
-import { findSession, removeSession, isRunning } from "../session.js";
+import { findSession, removeSession, isRunning, killProcessGroup } from "../session.js";
 import type { Options } from "../flags.js";
 
 export function stop(_args: string[], options: Options) {
@@ -8,21 +8,13 @@ export function stop(_args: string[], options: Options) {
     process.exit(1);
   }
 
-  try {
-    process.kill(session.pid, "SIGTERM");
-  } catch {
-    // already dead
-  }
+  killProcessGroup(session.pid, "SIGTERM");
 
   setTimeout(() => {
     if (isRunning(session.pid)) {
-      try {
-        process.kill(session.pid, "SIGKILL");
-      } catch {
-        // ignore
-      }
+      killProcessGroup(session.pid, "SIGKILL");
     }
     removeSession(session.id);
     console.log(JSON.stringify({ stopped: session.id, pid: session.pid }));
-  }, 500);
+  }, 1000);
 }

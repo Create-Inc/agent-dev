@@ -1,4 +1,4 @@
-import { findSession, removeSession, isRunning } from "../session.js";
+import { findSession, removeSession, isRunning, killProcessGroup } from "../session.js";
 import { daemonize } from "../daemon.js";
 import type { Options } from "../flags.js";
 
@@ -11,26 +11,18 @@ export function restart(_args: string[], options: Options) {
 
   const { cmd, pid, id, portless, name } = session;
 
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch {
-    // already dead
-  }
+  killProcessGroup(pid, "SIGTERM");
 
   setTimeout(() => {
     if (isRunning(pid)) {
-      try {
-        process.kill(pid, "SIGKILL");
-      } catch {
-        // ignore
-      }
+      killProcessGroup(pid, "SIGKILL");
     }
     removeSession(id);
 
-    const restartOptions: Options = { session: name ?? options.session, portless: portless || options.portless };
+    const restartOptions: Options = { session: name ?? options.session, portless: portless || options.portless, all: false };
     const meta = daemonize(cmd, restartOptions);
     const out: Record<string, unknown> = { restarted: meta.id, pid: meta.pid, cmd: meta.cmd.join(" ") };
     if (meta.url) out.url = meta.url;
     console.log(JSON.stringify(out));
-  }, 500);
+  }, 1000);
 }

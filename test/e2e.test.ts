@@ -62,7 +62,7 @@ describe("agent-dev e2e", () => {
     const out = JSON.parse(stdout);
     assert.ok(out.stopped);
 
-    sleep(600);
+    sleep(1200);
     const { stdout: statusOut } = run("status");
     assert.match(statusOut, /no sessions/);
   });
@@ -73,7 +73,7 @@ describe("agent-dev e2e", () => {
     sleep(300);
 
     const { stdout: restarted } = run("restart");
-    sleep(600);
+    sleep(1200);
     const out = JSON.parse(restarted);
     assert.ok(out.restarted);
     assert.notEqual(out.pid, firstPid);
