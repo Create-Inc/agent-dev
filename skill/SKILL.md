@@ -12,22 +12,14 @@ A CLI for managing dev server processes as background daemons and searching thei
 
 The killer use case: while the user is testing in the browser, poll `agent-dev search` to immediately catch and diagnose server-side errors. The user doesn't need to copy-paste logs or describe the error — you already have it.
 
+After making a fix, set a mark so you only see new errors:
+
 ```bash
-# Poll for errors while the user tests
-agent-dev search "error"
-agent-dev search "TypeError"
-agent-dev search "500"
-agent-dev search "ECONNREFUSED"
-agent-dev search "unhandled"
-
-# Check the latest output
-agent-dev tail 20
-
-# Dump everything
-agent-dev logs
+agent-dev mark "fixed auth bug"
+# user keeps testing...
+agent-dev search "error"          # only shows errors after the mark
+agent-dev --all search "error"    # full history if needed
 ```
-
-When the user is QAing, run `agent-dev search "error"` (or similar) periodically. If it returns results, you have the stack trace and can start diagnosing immediately without the user needing to report anything.
 
 ## Commands
 
@@ -36,19 +28,23 @@ When the user is QAing, run `agent-dev search "error"` (or similar) periodically
 agent-dev run npm run dev
 agent-dev run next dev --port 3000
 
+# Wait for it to be ready (replaces lsof polling)
+agent-dev wait --port 3000
+agent-dev wait --text "ready"
+agent-dev wait --port 3000 --timeout 60000
+
 # Named sessions
 agent-dev --session myapp run npm run dev
 
 # With portless (stable HTTPS .localhost URLs)
 agent-dev --session myapp --portless run npm run dev
-# => https://myapp.localhost
 
-# Check running session
+# Check session status (shows dead sessions too)
 agent-dev status
 
-# Search server logs
+# Search server logs (scoped to current repo by default)
 agent-dev search "error"
-agent-dev search "listening on"
+agent-dev search "TypeError"
 agent-dev --session myapp search "ready"
 
 # View logs
@@ -56,60 +52,68 @@ agent-dev logs                  # all output
 agent-dev tail [n]              # last n lines (default 50)
 agent-dev head [n]              # first n lines (default 50)
 
+# Marks (checkpoints for search)
+agent-dev mark "fixed the bug"  # set checkpoint
+agent-dev marks                 # list all marks
+# search defaults to after latest mark
+
 # Lifecycle
-agent-dev restart               # stop + re-run same command
-agent-dev stop
+agent-dev restart               # stop + re-run same command (kills child processes)
+agent-dev stop                  # kills entire process group
+agent-dev clean                 # remove dead session state
 ```
 
 ## Flags and Environment Variables
 
 | Flag | Env | Description |
 |------|-----|-------------|
-| `--session <name>` | `AGENT_DEV_SESSION` | Name the session (default: random id) |
+| `--session <name>` | `AGENT_DEV_SESSION` | Name the session (default: repo-branch hash) |
 | `--portless` | `AGENT_DEV_PORTLESS=1` | Route through portless (`https://<name>.localhost`) |
+| `--all` | | Ignore repo scope and marks |
 | | `AGENT_DEV_LOG_DIR` | Custom state/log directory (default: `~/.agent-dev`) |
 
 ## Common Patterns
 
-### Start, then monitor while user QAs
+### Start, wait, then monitor while user QAs
 
 ```bash
-agent-dev --session myapp run npm run dev
-sleep 2
-agent-dev search "ready"
-# ... user is testing ...
+agent-dev run npm run dev
+agent-dev wait --port 3000
+# server is ready
 agent-dev search "error"
 agent-dev tail 20
 ```
 
-### Diagnose after user reports a problem
+### Fix-mark-search cycle
 
 ```bash
-agent-dev search "500"
-agent-dev search "TypeError"
-agent-dev tail 50
+# fix the code...
+agent-dev mark "fixed null ref"
+# user tests again...
+agent-dev search "error"          # only new errors
 ```
 
-### Portless with named sessions
+### Diagnose a crash (post-mortem)
 
 ```bash
-agent-dev --session api --portless run npm run dev
-# Server available at https://api.localhost
+agent-dev status                  # shows running: false
+agent-dev tail 50                 # see what happened
+agent-dev search "EADDRINUSE"     # check for port conflicts
 ```
 
 ### Restart after code changes
 
 ```bash
 agent-dev restart
-sleep 2
-agent-dev search "ready"
+agent-dev wait --port 3000
 ```
 
 ## Notes
 
-- Named sessions allow targeting specific servers with `--session`
-- Without `--session`, commands target the first active session found
+- Default session ID is `{repo}-{branch}-{hash}` — scoped to current git repo/branch
+- Without `--session`, commands target the current repo's session
+- `--all` shows sessions from all repos and ignores marks
+- Dead sessions are preserved for debugging — use `clean` to remove them
+- `stop` and `restart` kill the entire process group (child processes too)
 - Logs are captured to `~/.agent-dev/sessions/<id>/out.log`
-- The process runs fully detached — it survives the parent shell exiting
-- `restart` re-uses the original command, working directory, session name, and portless setting
-- `stop` sends SIGTERM first, then SIGKILL after 500ms if needed
+- `restart` re-uses the original command, working directory, and settings
