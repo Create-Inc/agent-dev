@@ -1,6 +1,7 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { listSessions } from "../session.js";
 import { logFile } from "../paths.js";
+import { searchLog } from "../logreader.js";
 import type { Options } from "../flags.js";
 
 export function search(args: string[], options: Options) {
@@ -9,7 +10,7 @@ export function search(args: string[], options: Options) {
     process.exit(1);
   }
 
-  const pattern = args.join(" ").toLowerCase();
+  const pattern = args.join(" ");
   let sessions = listSessions();
 
   if (options.session) {
@@ -25,17 +26,18 @@ export function search(args: string[], options: Options) {
     const log = logFile(session.id);
     if (!existsSync(log)) continue;
 
-    const content = readFileSync(log, "utf-8");
-    const lines = content.split("\n");
-    const matches = lines
-      .map((line, i) => ({ line, num: i + 1 }))
-      .filter(({ line }) => line.toLowerCase().includes(pattern));
+    const results = searchLog(log, pattern);
 
-    if (matches.length > 0) {
+    if (results.length > 0) {
       const label = session.name ?? session.id;
       console.log(`--- session ${label} (${session.cmd.join(" ")}) ---`);
-      for (const { line, num } of matches) {
+      for (const { line, num, context } of results) {
         console.log(`  ${num}: ${line}`);
+        for (let i = 0; i < context.length; i++) {
+          if (context[i].trim()) {
+            console.log(`  ${num + i + 1}  ${context[i]}`);
+          }
+        }
       }
     }
   }

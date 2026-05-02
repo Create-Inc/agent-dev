@@ -5,19 +5,21 @@ import { stop } from "./commands/stop.js";
 import { search } from "./commands/search.js";
 import { restart } from "./commands/restart.js";
 import { status } from "./commands/status.js";
-import { logs } from "./commands/logs.js";
+import { logs, tail, head } from "./commands/logs.js";
 import { parseFlags } from "./flags.js";
 
 const { options, rest } = parseFlags(process.argv.slice(2));
 const [command, ...args] = rest;
 
-const commands: Record<string, (args: string[], options: ReturnType<typeof parseFlags>["options"]) => void> = {
+const commands: Record<string, (args: string[], options: ReturnType<typeof parseFlags>["options"]) => void | Promise<void>> = {
   run,
   stop,
   search,
   restart,
   status,
   logs,
+  tail,
+  head,
 };
 
 if (!command || !commands[command]) {
@@ -29,7 +31,9 @@ commands:
   restart         Restart the current session
   search <terms>  Search session logs
   status          Show current session info
-  logs            Show path to session log file
+  logs            Dump all session logs
+  tail [n]        Last n lines of logs (default 50)
+  head [n]        First n lines of logs (default 50)
 
 flags:
   --session <name>   Name the session (default: random id)

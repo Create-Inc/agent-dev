@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
 import { findSession } from "../session.js";
 import { logFile } from "../paths.js";
+import { streamAll, readTailLines, readHeadLines } from "../logreader.js";
 import type { Options } from "../flags.js";
 
-export function logs(_args: string[], options: Options) {
+function resolveLog(options: Options): string {
   const session = findSession(options.session);
   if (!session) {
     console.error(options.session ? `no active session "${options.session}"` : "no active session");
@@ -16,5 +17,25 @@ export function logs(_args: string[], options: Options) {
     process.exit(1);
   }
 
-  console.log(JSON.stringify({ session: session.id, log: path }));
+  return path;
+}
+
+export function logs(_args: string[], options: Options) {
+  streamAll(resolveLog(options));
+}
+
+export function tail(args: string[], options: Options) {
+  const n = parseInt(args[0]) || 50;
+  const lines = readTailLines(resolveLog(options), n);
+  for (const line of lines) {
+    console.log(line);
+  }
+}
+
+export async function head(args: string[], options: Options) {
+  const n = parseInt(args[0]) || 50;
+  const lines = await readHeadLines(resolveLog(options), n);
+  for (const line of lines) {
+    console.log(line);
+  }
 }

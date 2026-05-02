@@ -1,35 +1,43 @@
 ---
 name: agent-dev
-description: Dev server process manager for AI agents. Use when the user needs to start, stop, restart, or manage a development server running in the background. Triggers include requests to "start the dev server", "run the dev server", "stop the server", "restart the server", "check if the server is running", "search the server logs", or any task requiring a background dev server process.
+description: Dev server process manager and log monitor for AI agents. Use when the user needs to start, stop, or manage a dev server, OR when the user is QAing/testing and you need to watch server logs for errors. Key use case - poll logs with `agent-dev search` while the user tests so you can immediately diagnose issues as they happen. Triggers include "start the dev server", "watch for errors", "monitor the server", "what does the server say", "check the logs", "debug this", "QA this", or any task where the agent should be aware of server-side behavior.
 allowed-tools: Bash(agent-dev:*)
 ---
 
 # Dev Server Management with agent-dev
 
-A lightweight CLI for managing dev server processes as background daemons. Spawns processes detached, captures stdout/stderr to searchable logs, and tracks sessions via PID files in `~/.agent-dev/`.
+A CLI for managing dev server processes as background daemons and searching their logs. The server runs detached, captures all stdout/stderr, and the agent can search or tail logs at any time without being attached to the process.
 
-## Core Workflow
+## Watching Logs During QA
 
-1. **Start**: `agent-dev run <command> [args...]` — daemonize the process, get a session ID
-2. **Check**: `agent-dev status` — see if it's running
-3. **Search**: `agent-dev search <terms>` — grep the logs
-4. **Restart**: `agent-dev restart` — stop and re-run with the same command
-5. **Stop**: `agent-dev stop` — kill the session and clean up
-6. **Logs**: `agent-dev logs` — get the log file path
+The killer use case: while the user is testing in the browser, poll `agent-dev search` to immediately catch and diagnose server-side errors. The user doesn't need to copy-paste logs or describe the error — you already have it.
 
-All output is JSON for easy parsing.
+```bash
+# Poll for errors while the user tests
+agent-dev search "error"
+agent-dev search "TypeError"
+agent-dev search "500"
+agent-dev search "ECONNREFUSED"
+agent-dev search "unhandled"
+
+# Check the latest output
+agent-dev tail 20
+
+# Dump everything
+agent-dev logs
+```
+
+When the user is QAing, run `agent-dev search "error"` (or similar) periodically. If it returns results, you have the stack trace and can start diagnosing immediately without the user needing to report anything.
 
 ## Commands
 
 ```bash
 # Start a dev server in the background
 agent-dev run npm run dev
-agent-dev run python3 -m http.server 8080
 agent-dev run next dev --port 3000
 
 # Named sessions
 agent-dev --session myapp run npm run dev
-agent-dev --session api run node server.js
 
 # With portless (stable HTTPS .localhost URLs)
 agent-dev --session myapp --portless run npm run dev
@@ -37,24 +45,20 @@ agent-dev --session myapp --portless run npm run dev
 
 # Check running session
 agent-dev status
-# {"session":"myapp","pid":12345,"running":true,"cmd":"npm run dev","name":"myapp","url":"https://myapp.localhost"}
 
-# Search server logs for errors, URLs, or any text
+# Search server logs
 agent-dev search "error"
 agent-dev search "listening on"
 agent-dev --session myapp search "ready"
 
-# Show log file path
-agent-dev logs
-agent-dev --session myapp logs
+# View logs
+agent-dev logs                  # all output
+agent-dev tail [n]              # last n lines (default 50)
+agent-dev head [n]              # first n lines (default 50)
 
-# Restart with the same command (preserves session name and portless)
-agent-dev restart
-agent-dev --session myapp restart
-
-# Stop the running server
+# Lifecycle
+agent-dev restart               # stop + re-run same command
 agent-dev stop
-agent-dev --session myapp stop
 ```
 
 ## Flags and Environment Variables
@@ -67,12 +71,23 @@ agent-dev --session myapp stop
 
 ## Common Patterns
 
-### Start and verify
+### Start, then monitor while user QAs
 
 ```bash
 agent-dev --session myapp run npm run dev
 sleep 2
 agent-dev search "ready"
+# ... user is testing ...
+agent-dev search "error"
+agent-dev tail 20
+```
+
+### Diagnose after user reports a problem
+
+```bash
+agent-dev search "500"
+agent-dev search "TypeError"
+agent-dev tail 50
 ```
 
 ### Portless with named sessions
@@ -80,15 +95,6 @@ agent-dev search "ready"
 ```bash
 agent-dev --session api --portless run npm run dev
 # Server available at https://api.localhost
-agent-dev --session api search "listening"
-```
-
-### Using env vars for defaults
-
-```bash
-export AGENT_DEV_SESSION=myapp
-export AGENT_DEV_PORTLESS=1
-agent-dev run npm run dev
 ```
 
 ### Restart after code changes
@@ -96,7 +102,7 @@ agent-dev run npm run dev
 ```bash
 agent-dev restart
 sleep 2
-agent-dev status
+agent-dev search "ready"
 ```
 
 ## Notes
