@@ -1,8 +1,8 @@
-import { listSessions, isRunning } from "../session.js";
+import { listSessions, listRepoSessions } from "../session.js";
 import type { Options } from "../flags.js";
 
 export function status(_args: string[], options: Options) {
-  let sessions = listSessions();
+  let sessions = options.all ? listSessions() : listRepoSessions();
 
   if (options.session) {
     sessions = sessions.filter((s) => s.name === options.session || s.id === options.session);
@@ -14,11 +14,10 @@ export function status(_args: string[], options: Options) {
   }
 
   for (const s of sessions) {
-    const alive = isRunning(s.pid);
     const out: Record<string, unknown> = {
       session: s.id,
       pid: s.pid,
-      running: alive,
+      running: true,
       cmd: s.cmd.join(" "),
       cwd: s.cwd,
       started: s.startedAt,

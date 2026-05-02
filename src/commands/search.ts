@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { listSessions } from "../session.js";
+import { listSessions, listRepoSessions } from "../session.js";
 import { logFile } from "../paths.js";
 import { searchLog } from "../logreader.js";
 import { getLatestMark } from "../marks.js";
@@ -12,7 +12,7 @@ export function search(args: string[], options: Options) {
   }
 
   const pattern = args.join(" ");
-  let sessions = listSessions();
+  let sessions = options.all ? listSessions() : listRepoSessions();
 
   if (options.session) {
     sessions = sessions.filter((s) => s.name === options.session || s.id === options.session);
