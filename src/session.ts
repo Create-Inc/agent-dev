@@ -44,7 +44,7 @@ export function defaultSessionId(): string {
       }).trim();
       const hash = createHash("sha256").update(`${root}:${branch}`).digest("hex").slice(0, 8);
       const repoName = root.split("/").pop() ?? "repo";
-      return `${repoName}-${branch}-${hash}`;
+      return `${repoName}-${branch.replaceAll("/", "-")}-${hash}`;
     } catch {
       // fall through
     }
