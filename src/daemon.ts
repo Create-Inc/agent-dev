@@ -39,10 +39,15 @@ function spawnDetached(
   const out = openSync(ctx.log, "a");
   const err = openSync(ctx.log, "a");
 
+  const env = Object.keys(ctx.options.env).length > 0
+    ? { ...process.env, ...ctx.options.env }
+    : undefined;
+
   const child = spawn(bin, args, {
     detached: true,
     stdio: ["ignore", out, err],
     cwd: process.cwd(),
+    env,
   });
 
   child.unref();
@@ -55,6 +60,7 @@ function spawnDetached(
     pid: child.pid!,
     portless: ctx.options.portless,
     url: ctx.url,
+    env: ctx.options.env,
     startedAt: new Date().toISOString(),
   };
 
@@ -69,9 +75,14 @@ function spawnAttached(
 ): SessionMeta {
   const logStream = createWriteStream(ctx.log, { flags: "a" });
 
+  const env = Object.keys(ctx.options.env).length > 0
+    ? { ...process.env, ...ctx.options.env }
+    : undefined;
+
   const child = spawn(bin, args, {
     stdio: ["inherit", "pipe", "pipe"],
     cwd: process.cwd(),
+    env,
   });
 
   // tee stdout and stderr to both terminal and log file
@@ -92,6 +103,7 @@ function spawnAttached(
     pid: child.pid!,
     portless: ctx.options.portless,
     url: ctx.url,
+    env: ctx.options.env,
     startedAt: new Date().toISOString(),
   };
 

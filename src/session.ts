@@ -12,6 +12,7 @@ export interface SessionMeta {
   pid: number;
   portless: boolean;
   url: string | null;
+  env: Record<string, string>;
   startedAt: string;
 }
 

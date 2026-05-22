@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "description": "Dev server process manager for AI agents",
   "type": "module",
-  "bin": {
-    "agent-dev": "./dist/index.js"
-  },
+  "bin": "./dist/index.js",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

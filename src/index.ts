@@ -38,7 +38,8 @@ yargs(hideBin(process.argv))
     (y) =>
       y
         .positional("cmd", { type: "string", array: true, demandOption: true })
-        .option("attach", { type: "boolean", describe: "Run in foreground, tee output to log" }),
+        .option("attach", { type: "boolean", describe: "Run in foreground, tee output to log" })
+        .option("env", { type: "string", array: true, alias: "e", describe: "Set env variable (KEY=VALUE or KEY to forward)" }),
     (argv) => run(argv.cmd as string[], toOptions(argv))
   )
   .command(

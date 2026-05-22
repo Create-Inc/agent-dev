@@ -28,6 +28,10 @@ agent-dev --all search "error"    # full history if needed
 agent-dev run npm run dev
 agent-dev run next dev --port 3000
 
+# Pass environment variables to the server
+agent-dev run -e PORT=3001 -e DEBUG=true npm start
+agent-dev run -e AWS_PROFILE npm start   # forwards current value
+
 # Wait for it to be ready (replaces lsof polling)
 agent-dev wait --port 3000
 agent-dev wait --text "ready"
@@ -69,6 +73,7 @@ agent-dev clean                 # remove dead session state
 |------|-----|-------------|
 | `--session <name>` | `AGENT_DEV_SESSION` | Name the session (default: repo-branch hash) |
 | `--portless` | `AGENT_DEV_PORTLESS=1` | Route through portless (`https://<name>.localhost`) |
+| `--env`/`-e` `KEY=VAL` | | Set env variable for spawned server (repeatable; bare `KEY` forwards current value) |
 | `--all` | | Ignore repo scope and marks |
 | | `AGENT_DEV_LOG_DIR` | Custom state/log directory (default: `~/.agent-dev`) |
 
@@ -116,4 +121,4 @@ agent-dev wait --port 3000
 - Dead sessions are preserved for debugging — use `clean` to remove them
 - `stop` and `restart` kill the entire process group (child processes too)
 - Logs are captured to `~/.agent-dev/sessions/<id>/out.log`
-- `restart` re-uses the original command, working directory, and settings
+- `restart` re-uses the original command, working directory, env vars, and settings
