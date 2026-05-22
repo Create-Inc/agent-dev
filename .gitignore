@@ -1,2 +1,7 @@
 node_modules
 dist
+
+# Yarn
+.pnp.*
+.yarn/install-state.gz
+package-lock.json
