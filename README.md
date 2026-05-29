@@ -13,7 +13,7 @@ Or from source:
 ```bash
 git clone https://github.com/Create-Inc/agent-dev.git
 cd agent-dev
-npm install && npm run link
+yarn install && yarn link
 ```
 
 ## Usage
